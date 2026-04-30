@@ -1,0 +1,79 @@
+from RsInstrument import RsInstrument
+from time import sleep
+import os
+
+# Define variables
+# the IP Adress
+resource = 'TCPIP::192.168.1.131::INSTR'
+recdur = 0.5  # Reduced duration to 0.5 seconds
+#The folder name for saving the traces inside it
+folder = './Gaussian_Signal_Tracess'
+os.makedirs(folder, exist_ok=True)
+
+# Define the device handle
+instrument = RsInstrument(resource, reset=False, id_query=True, options="SelectVisa='rs'")
+
+def com_prep():
+    print(f'VISA Manufacturer: {instrument.visa_manufacturer}')
+    instrument.visa_timeout = 5000
+    instrument.opc_timeout = 3000
+    instrument.instrument_status_checking = True
+    instrument.clear_status()
+
+def close():
+    instrument.close()
+
+def com_check():
+    idn_response = instrument.query_str('*IDN?')
+    print('Hello, I am ' + idn_response)
+
+def meas_prep():
+    instrument.write_str_with_opc('FREQuency:CENTer 467.57069e6')
+    instrument.write_str_with_opc('FREQuency:SPAN 10e6')
+    instrument.write_str_with_opc('DISPlay:TRACe1:MODE MAXHold')
+
+def trace_get(index):
+    instrument.write_str_with_opc('INITiate:CONTinuous ON')
+    print(f'Collecting trace {index+1}/100...')
+    sleep(recdur)
+    instrument.write('DISPlay:TRACe1:MODE VIEW')
+    instrument.query_opc()
+    sleep(0.5)
+
+    trace_data = instrument.query('Trace:DATA? TRACe1')
+    csv_trace_data = trace_data.split(",")
+    trace_len = len(csv_trace_data)
+
+    start_freq = instrument.query_float('FREQuency:STARt?')
+    span = instrument.query_float('FREQuency:SPAN?')
+    step_size = span / (trace_len - 1)
+
+    filename = os.path.join(folder, f'Trace_{index + 1:03d}.csv')
+    with open(filename, 'w') as file:
+        file.write("Frequency (Hz),Amplitude (dBm)\n")
+        for x in range(trace_len):
+            try:
+                freq = start_freq + x * step_size
+                amp = float(csv_trace_data[x])
+                file.write(f"{freq:.1f},{amp:.2f}\n")
+            except ValueError:
+                continue
+
+# Main program
+com_prep()
+com_check()
+meas_prep()
+
+#Add 5-second delay before collecting traces
+print("Waiting 5 seconds before starting trace collection...")
+sleep(5)
+
+for i in range(100):
+    trace_get(i)
+
+#  Restore live signal sweep
+instrument.write("DISPlay:TRACe1:MODE WRITe")        # Live updating trace
+instrument.write("INITiate:CONTinuous ON")           # Continuous sweep
+instrument.write("INITiate:IMMediate")               # Start sweep immediately
+close()
+print('Program successfully ended. Saved 100 trace files in', folder)

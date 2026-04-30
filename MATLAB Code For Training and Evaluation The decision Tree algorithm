@@ -1,0 +1,117 @@
+%% ============================================================
+%  JAMMING DETECTION — DECISION TREE (TRAIN + 10 EVAL DATASETS)
+%  Author: Zainab
+%% ============================================================
+
+clearvars; close all; clc;
+
+%% ------------------------------------------------------------
+% 1) Load TRAINING dataset
+%% ------------------------------------------------------------
+train_path = 'C:\Users\cubeadmin\Documents\ZainabAlsaffar\SAJam\All Scenarios2\Training\Four_Cases_Detection_Training.csv';
+train_data = readtable(train_path,'VariableNamingRule','modify');
+
+X_train = [train_data.SignalPower_dBm_, ...
+           train_data.NoiseFloor_dBm_, ...
+           train_data.SNR_dB_, ...
+           train_data.EdgeFrequencyAvg_Hz_];
+
+y_train = train_data.Condition;
+
+%% ------------------------------------------------------------
+% 2) Train Decision Tree
+%% ------------------------------------------------------------
+tree = fitctree(X_train, y_train, "OptimizeHyperparameters", "auto");
+
+fprintf("\n==============================\n");
+fprintf(" Model Training Completed\n");
+fprintf("==============================\n");
+
+%% ------------------------------------------------------------
+% 3) Evaluation dataset list (10 datasets)
+%% ------------------------------------------------------------
+eval_paths = {
+    'C:\Users\cubeadmin\Documents\ZainabAlsaffar\SAJam\All Scenarios2\Jammig_With_Lower_Power\Four_Cases_Detection_Lower(0).csv'
+    'C:\Users\cubeadmin\Documents\ZainabAlsaffar\SAJam\All Scenarios2\Jammig_With_Lower_Power\Four_Cases_Detection_Lower(3).csv'
+    'C:\Users\cubeadmin\Documents\ZainabAlsaffar\SAJam\All Scenarios2\Jammig_With_Lower_Power\Four_Cases_Detection_Lower(6).csv'
+    'C:\Users\cubeadmin\Documents\ZainabAlsaffar\SAJam\All Scenarios2\Jammig_With_Lower_Power\Four_Cases_Detection_Lower(9).csv'
+    'C:\Users\cubeadmin\Documents\ZainabAlsaffar\SAJam\All Scenarios2\Same_Power\Four_Cases_Detection(SamePower).csv'
+    'C:\Users\cubeadmin\Documents\ZainabAlsaffar\SAJam\All Scenarios2\Jammig_With_Higher_Power\Four_Cases_Detection_Higher(15).csv'
+    'C:\Users\cubeadmin\Documents\ZainabAlsaffar\SAJam\All Scenarios2\Jammig_With_Higher_Power\Four_Cases_Detection_Higher(18).csv'
+    'C:\Users\cubeadmin\Documents\ZainabAlsaffar\SAJam\All Scenarios2\Jammig_With_Higher_Power\Four_Cases_Detection_Higher(21).csv'
+    'C:\Users\cubeadmin\Documents\ZainabAlsaffar\SAJam\All Scenarios2\Jammig_With_Higher_Power\Four_Cases_Detection_Higher(24).csv'
+    
+};
+
+%% ------------------------------------------------------------
+% 4) Loop through each evaluation dataset
+%% ------------------------------------------------------------
+for k = 1:length(eval_paths)
+
+    fprintf("\n=============================================\n");
+    fprintf(" Evaluating Dataset %d\n", k);
+    fprintf("=============================================\n");
+
+    % Load evaluation dataset
+    data = readtable(eval_paths{k}, 'VariableNamingRule','modify');
+
+    X_new = [data.SignalPower_dBm_, ...
+             data.NoiseFloor_dBm_, ...
+             data.SNR_dB_, ...
+             data.EdgeFrequencyAvg_Hz_];
+
+    y_new = data.Condition;
+
+    % Predict
+    YPred = predict(tree, X_new);
+
+    % Accuracy
+    accuracy = sum(strcmp(YPred, y_new)) / length(y_new);
+    fprintf("Accuracy (Dataset %d): %.2f%%\n", k, accuracy*100);
+
+    % Confusion Matrix
+    C = confusionmat(y_new, YPred);
+
+    figure();
+    cm = confusionchart(y_new, YPred);
+
+    % ------------------------------------------------------------
+    % >>> FONT SIZE ADDED (ONLY CHANGE YOU REQUESTED) <<<
+    % ------------------------------------------------------------
+    cm.FontSize = 35;
+    % ------------------------------------------------------------
+
+    %% Classification Report
+    classes = unique(y_new);
+    numClasses = numel(classes);
+
+    precision = zeros(numClasses,1);
+    recall    = zeros(numClasses,1);
+    f1score   = zeros(numClasses,1);
+    support   = sum(C,2);
+
+    for i = 1:numClasses
+        TP = C(i,i);
+        FP = sum(C(:,i)) - TP;
+        FN = sum(C(i,:)) - TP;
+
+        precision(i) = TP / (TP + FP + eps);
+        recall(i)    = TP / (TP + FN + eps);
+        f1score(i)   = 2 * (precision(i)*recall(i)) / (precision(i)+recall(i)+eps);
+    end
+
+    overallAccuracy = sum(diag(C)) / sum(C(:));
+
+    fprintf("\nClassification Report — Dataset %d\n", k);
+    fprintf('%-15s %-10s %-10s %-10s %-10s\n', 'Class','Precision','Recall','F1','Support');
+    fprintf(repmat('-',1,60)); fprintf('\n');
+
+    for i = 1:numClasses
+        fprintf('%-15s %-10.2f %-10.2f %-10.2f %-10d\n', ...
+            string(classes(i)), precision(i), recall(i), f1score(i), support(i));
+    end
+
+    fprintf("\nOverall Accuracy: %.2f%%\n", overallAccuracy*100);
+
+end
+

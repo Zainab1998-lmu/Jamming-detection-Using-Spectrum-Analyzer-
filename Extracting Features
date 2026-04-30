@@ -1,0 +1,74 @@
+import os
+import pandas as pd
+import numpy as np
+
+# Folder containing the signal trace CSV files
+folder = './Gaussian_Signal_Traces'
+output_file = 'Gaussian_Metrix.csv'
+
+# List to store results
+results = []
+
+# Check if the folder exists
+if os.path.exists(folder):
+    for filename in sorted(os.listdir(folder)):
+        if filename.endswith('.csv'):
+            filepath = os.path.join(folder, filename)
+            try:
+                df = pd.read_csv(filepath)
+
+                if 'Amplitude (dBm)' in df.columns and 'Frequency (Hz)' in df.columns:
+                    amplitudes = df['Amplitude (dBm)'].dropna().values
+                    frequencies = df['Frequency (Hz)'].dropna().values
+
+                    # Bottom 15% for noise of sorted data
+                    # Sort amplitudes and corresponding frequencies
+                    sorted_indices = np.argsort(amplitudes)
+                    sorted_amplitudes = amplitudes[sorted_indices]
+                    sorted_frequencies = frequencies[sorted_indices]
+                    n = len(sorted_amplitudes)
+                    cutoff_index = int(0.15 * n)
+                    noise_values = sorted_amplitudes[:cutoff_index]
+
+                    # signal power (Average points above the noise floor)
+                    noise_floor = np.mean(noise_values)
+                    threshold =  noise_floor +5
+                    signal_points = amplitudes[amplitudes > threshold]
+                    if len(signal_points) > 0:
+                        signal_power = np.mean(signal_points)
+                    else:
+                        signal_power = noise_floor
+
+
+                    # Calculate SNR
+                    snr = signal_power - noise_floor
+
+                    # Edge frequency average (-6db from the peak)
+                    peak_val = np.max(amplitudes)
+                    edge_threshold = peak_val - 6
+                    signal_indices = np.where(amplitudes > edge_threshold)[0]
+                    if len (signal_indices) > 0:
+                        freq_start_edge = frequencies[signal_indices[0]]
+                        freq_end_edge =   frequencies[signal_indices[-1]]
+                        edge_freq_avg = np.mean([freq_start_edge, freq_end_edge])
+                    else:
+                        edge_freq_avg = 0 
+
+                    # Store results
+                    results.append({
+                        'Trace': filename,
+                        'Signal Power (dBm)': signal_power,
+                        'Noise Floor (dBm)': noise_floor,
+                        'SNR (dB)': snr,
+                        'Edge Frequency Avg (Hz)': edge_freq_avg
+                    })
+
+            except Exception as e:
+                print(f"Error processing {filename}: {e}")
+
+# Save results to CSV
+df_results = pd.DataFrame(results)
+df_results.to_csv(output_file, index=False)
+
+print(f"Updated signal matrix saved to {output_file}")
+

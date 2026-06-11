@@ -19,6 +19,7 @@ The project is structured into two essential sections: the hardware setup config
 2. Personal Computer (PC).
 3. Receive Antenna. 
 4. Signal Jammer  Source.
+5. Walkie-Talkies
 
 <h1>Operational Parameters & Environment</h1> 
 
@@ -46,14 +47,13 @@ The project is structured into two essential sections: the hardware setup config
 - matplotlib
 - scikit-learn
 
-<h1>SDR connection + Incoming Signals Plotting + Traces Collection</h1>
-From "Trace Collection" File: 
+<h1>Spectrum Analyzer connection + Traces Collection</h1>
+From "Collect Traces" File: 
 
-1. Establishes connection to the SDR client library (pyrtlsdr), applies hardware gain profiles, sets the sampling rates.
-2. validates structural output via multi-domain plotting (Time, Frequency via FFT, and Spectrogram displays).
-3. Automates data collection by capturing individual signal traces over short intervals, tracking the highest amplitudes across specified frequency bin regions. The system collects 500 traces per signal type across 9 distinct power variance scenarios. 
+1. Establishes connection to the Spectrum Analyzer 
+2. Automates data collection by capturing individual signal traces over short intervals, tracking the highest amplitudes across specified frequency bin regions. The system collects 500 traces per signal type across 9 distinct power variance scenarios. 
 <h1>Feature Extraction</h1>
-From the "Feature Extraction" File: 
+From the " Extracting Features" File: 
 
 Generateing data matrices to extract 4 explicit operational markers from each spectrum trace to build the dataset:  
 1. Signal Power ($dB$)
@@ -69,7 +69,7 @@ Giving label for each signal types:
 - SingleTone For Single Tone Jamming Signals.
 - Sweep For Sweep Jamming Signals.
 - Gaussian For Gaussian Jamming Signals. 
-<h1>Training The DT Algorithm</h1>
+<h1>Training and Validating The DT Algorithm</h1>
 From "Training tDecision Tree algorithm" File.
 
 Training the model with 14,000 distinct samples. 

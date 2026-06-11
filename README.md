@@ -70,8 +70,6 @@ Giving label for each signal types:
 - Sweep For Sweep Jamming Signals.
 - Gaussian For Gaussian Jamming Signals. 
 <h1>Training and Validating The DT Algorithm</h1>
-From "Training tDecision Tree algorithm" File.
+From "MATLAB Code For Training and Validation The decision Tree algorithm" File.
 
-Training the model with 14,000 distinct samples. 
-<h1>Decision Tree Validation</h1>
-Validating the model with new dataset, and exporting the classification reports (Precision, Recall, F1 scores) and multi-class heatmapped confusion matrices. 
+Training the model with 2800 distinct samples and validating the model with new dataset, and exporting the classification reports (Precision, Recall, F1 scores) and multi-class heatmapped confusion matrices. 
